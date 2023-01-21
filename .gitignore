@@ -7,6 +7,9 @@ config/config*.ini
 config/local_custom.json
 test/*.ini
 
+# tmp
+.eventcache
+
 # Logging
 *.log
 *.log.*

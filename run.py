@@ -7,8 +7,10 @@
 ****************************************
 '''
 import argparse
+import sys
 import logging
 from logging.handlers import RotatingFileHandler
+
 import eventmanager
 
 '''
@@ -40,10 +42,16 @@ log = logging.getLogger() # root logger
 def config_logging(logger, console_loglevel = logging.INFO, file_loglevel = None):
     # console logging configuration
     formatter_console = logging.Formatter('[%(asctime)s] [%(name)12s] [%(levelname)7s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(console_loglevel)
-    console_handler.setFormatter(formatter_console)
-    logger.addHandler(console_handler)
+    # stdout config
+    stdout_hdlr = logging.StreamHandler(sys.stdout)
+    stdout_hdlr.setFormatter(formatter_console)
+    stdout_hdlr.setLevel(console_loglevel)
+    logger.addHandler(stdout_hdlr)
+    # stderr config: Redirect messages equal or higher than ERROR to stderr.
+    stderr_hdlr = logging.StreamHandler(sys.stderr)
+    stderr_hdlr.setFormatter(formatter_console)
+    stderr_hdlr.setLevel(logging.ERROR)
+    logger.addHandler(stderr_hdlr)
     
     # file logging
     if file_loglevel is not None:
