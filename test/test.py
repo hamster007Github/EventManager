@@ -1,0 +1,447 @@
+#!/usr/local/bin/python
+# -*- coding: utf-8 -*-
+
+'''
+Links:
+- https://realpython.com/python-mock-library/#what-is-mocking
+- 
+'''
+
+'''
+****************************************
+* Import
+****************************************
+'''
+# unit testing
+import unittest
+from unittest.mock import patch, MagicMock
+# logging
+import logging
+from logging.handlers import RotatingFileHandler
+# time handling
+import time
+from datetime import datetime, timedelta
+
+#test objects
+import eventmanager
+import mysql.connector
+import requests
+
+'''
+****************************************
+* Constants
+****************************************
+'''
+#testdata
+TESTDATA_SPAWNS_DUMMYPOKEMON = [{"id": 123,"template": "POKEMONNAME"}]
+
+'''
+****************************************
+* Global variables
+****************************************
+'''
+#logging
+log = logging.getLogger() # root logger
+
+'''
+****************************************
+* Classes
+****************************************
+'''
+class TestEventManager(unittest.TestCase):
+    def setUp(self):
+            log_teststep(0, "setUp")
+            """setup mocks, which is applied to each test in this TestCase"""
+            # mock telegram send_message to always return ok (used to avoid flooding Telegram API, which will lead to exceed telegrm limits)
+            patcher = patch('eventmanager.SimpleTelegramApi.send_message', autospec=True)
+            self.mock_tg_send = patcher.start()
+            self.addCleanup(patcher.stop)
+            self.mock_tg_send.return_value = {"ok": True}
+            
+            # mock request.post function, used by discord send (used to avoid flooding Discord API)
+            patcher = patch('requests.post', autospec=True)
+            self.mock_requests_post = patcher.start()
+            self.addCleanup(patcher.stop)
+            self.request_response = requests.Response()
+            self.request_response.status_code = 200
+            self.mock_requests_post.return_value = self.request_response
+            
+            # mock time.sleep, otherwise tests tooks too long...
+            patcher = patch('time.sleep', autospec=True)
+            self.mock_sleep = patcher.start()
+            self.addCleanup(patcher.stop)
+            self.mock_sleep.return_value = None
+            
+            # mock helper_time_now to simulate different datetime.now()
+            patcher = patch('eventmanager.helper_time_now', autospec=True)
+            self.mock_now = patcher.start()
+            self.addCleanup(patcher.stop)
+            
+            # mock MadConnector so no real scanner and database is needed
+            patcher = patch('eventmanager.MadConnector.get_events', autospec=True)
+            self.mock_mad_get_events = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.insert_event', autospec=True)
+            self.mock_mad_insert_event = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.update_event', autospec=True)
+            self.mock_mad_update_event = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.delete_event', autospec=True)
+            self.mock_mad_delete_event = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.reset_all_quests', autospec=True)
+            self.mock_mad_reset_all_quests = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.reset_all_pokemon', autospec=True)
+            self.mock_mad_reset_all_pokemon = patcher.start()
+            self.addCleanup(patcher.stop)
+            patcher = patch('eventmanager.MadConnector.reset_filtered_pokemon', autospec=True)
+            self.mock_mad_reset_filtered_pokemon = patcher.start()
+            self.addCleanup(patcher.stop)
+            '''
+            patcher = patch('eventmanager.MadConnector.apply_settings', autospec=True)
+            self.mock_mad_apply_settings = patcher.start()
+            self.addCleanup(patcher.stop)
+            '''
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_mad_connector_reset_pokemon(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False, spawns=TESTDATA_SPAWNS_DUMMYPOKEMON)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_get_events_pokemon_event_by_spawns(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False, spawns=TESTDATA_SPAWNS_DUMMYPOKEMON)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+            self.assertEqual(len(event_manager._pokemon_events), 1)
+            self.assertEqual(len(event_manager._quest_events), 0)
+            self.assertEqual(len(event_manager._spawn_events), 0)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_get_events_pokemon_event_by_type_1(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "community-day", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+            self.assertEqual(len(event_manager._pokemon_events), 1)
+            self.assertEqual(len(event_manager._quest_events), 0)
+            self.assertEqual(len(event_manager._spawn_events), 0)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_get_events_pokemon_event_by_type_2(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "spotlight-hour", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+            self.assertEqual(len(event_manager._pokemon_events), 1)
+            self.assertEqual(len(event_manager._quest_events), 0)
+            self.assertEqual(len(event_manager._spawn_events), 0)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_get_events_quest_event(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=True)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+            self.assertEqual(len(event_manager._quest_events), 1)
+            self.assertEqual(len(event_manager._pokemon_events), 0)
+            self.assertEqual(len(event_manager._spawn_events), 0)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_get_events_spawn_event(self, mock_get_json):
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=True, has_quests=False)
+            mock_get_json.return_value = [testevent_1]
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager.connect()
+            self.assertEqual(len(event_manager._all_events), 1)
+            self.assertEqual(len(event_manager._spawn_events), 1)
+            self.assertEqual(len(event_manager._pokemon_events), 0)
+            self.assertEqual(len(event_manager._quest_events), 0)
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_quest_reset(self, mock_get_json):
+            test_step = 1
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=True)
+            mock_get_json.return_value = [testevent_1]
+            log_teststep(0, "testevent with start:'2010-01-01 10:00', end:'2010-01-01 12:00'")
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            
+            test_step = log_teststep(test_step, "event_manager.connect() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.connect()
+            self.mock_mad_reset_all_quests.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_not_called()
+            self.mock_tg_send.assert_not_called()
+            self.mock_requests_post.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:00' -> event start triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_called()
+            self.mock_tg_send.assert_called()
+            self.mock_requests_post.assert_called()
+            self.mock_mad_reset_all_quests.reset_mock()
+            self.mock_tg_send.reset_mock()
+            self.mock_requests_post.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 11:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=11, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_not_called()
+            self.mock_tg_send.assert_not_called()
+            self.mock_requests_post.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:00' -> event end triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_called()
+            self.mock_tg_send.assert_called()
+            self.mock_requests_post.assert_called()
+            self.mock_mad_reset_all_quests.reset_mock()
+            self.mock_tg_send.reset_mock()
+            self.mock_requests_post.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_all_quests.assert_not_called()
+            self.mock_tg_send.assert_not_called()
+            self.mock_requests_post.assert_not_called()
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_pokemon_reset_filtered(self, mock_get_json):
+            test_step = 1
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False, spawns=TESTDATA_SPAWNS_DUMMYPOKEMON)
+            mock_get_json.return_value = [testevent_1]
+            log_teststep(0, "testevent with start:'2010-01-01 10:00', end:'2010-01-01 12:00'")
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager._EventManager__reset_pokemon_enable = True
+            event_manager._EventManager__reset_pokemon_strategy = "filtered"
+            
+            test_step = log_teststep(test_step, "event_manager.connect() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.connect()
+            self.mock_mad_reset_filtered_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:00' -> event start triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_called()
+            self.mock_mad_reset_filtered_pokemon.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 11:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=11, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:00' -> event end triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_called()
+            self.mock_mad_reset_filtered_pokemon.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_filtered_pokemon.assert_not_called()
+
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_pokemon_reset_all(self, mock_get_json):
+            test_step = 1
+            # mock PogoInfoEventList.get_json to provide test event
+            start = datetime(2010, 1, 1, hour=10, minute=0)
+            end = datetime(2010, 1, 1, hour=12, minute=0)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="testevent", start = start, end = end, has_spawnpoints=False, has_quests=False, spawns=TESTDATA_SPAWNS_DUMMYPOKEMON)
+            mock_get_json.return_value = [testevent_1]
+            log_teststep(0, "testevent with start:'2010-01-01 10:00', end:'2010-01-01 12:00'")
+            
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_test.ini")
+            event_manager._EventManager__reset_pokemon_enable = True
+            event_manager._EventManager__reset_pokemon_strategy = "all"
+            
+            test_step = log_teststep(test_step, "event_manager.connect() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.connect()
+            self.mock_mad_reset_all_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 09:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=9, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:00' -> event start triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_called()
+            self.mock_mad_reset_all_pokemon.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 10:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=10, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 11:59:59'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=11, minute=59, second=59)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_not_called()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:00' -> event end triggered")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=0)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_called()
+            self.mock_mad_reset_all_pokemon.reset_mock()
+            
+            test_step = log_teststep(test_step, "event_manager.run() t='2010-01-01 12:00:01'")
+            self.mock_now.return_value = datetime(2010, 1, 1, hour=12, minute=0, second=1)
+            event_manager.run()
+            self.mock_mad_reset_all_pokemon.assert_not_called()
+
+
+@unittest.skip("Remove this line for real testenvironment testing")
+class TestEventManagerWithTestenvironment(unittest.TestCase):
+    @patch('eventmanager.PogoInfoEventList.get_json')
+    def test_event_start_full(self, mock_get_json):
+            test_step = 1
+            # mock PogoInfoEventList.get_json to provide test event with all possible changes (spawns, quests and pokemon)
+            now = datetime.now()
+            start = helper_roundup_datetime_minutes(now)
+            end = start + timedelta(minutes=1)
+            testevent_1 = helper_generate_raw_eventdata(event_type = "event", event_name="real_testevent", start = start, end = end, has_spawnpoints=True, has_quests=True, spawns=TESTDATA_SPAWNS_DUMMYPOKEMON)
+            mock_get_json.return_value = [testevent_1]
+            log_teststep(0, f"start test:{now} | testevent with start:{start}, end:{end}")
+            
+            event_manager = eventmanager.EventManager(config_file_name = "/test/config_realtest.ini")
+            event_manager._EventManager__reset_pokemon_enable = True
+            event_manager._EventManager__reset_pokemon_strategy = "all"
+            
+            test_step = log_teststep(test_step, f"event_manager.connect() t={datetime.now()}")
+            event_manager.connect()
+            
+            test_step = log_teststep(test_step, f"event_manager.run() t={datetime.now()}")
+            event_manager.run()
+            
+            test_step = log_teststep(test_step, f"event_manager.run() t={datetime.now()} -> event start triggered")
+            event_manager.run()
+            
+            test_step = log_teststep(test_step, f"event_manager.run() t={datetime.now()} -> event end triggered")
+            event_manager.run()
+            
+            test_step = log_teststep(test_step, f"done...")
+
+'''
+****************************************
+* Helper-functions
+****************************************
+'''
+def helper_roundup_datetime_minutes(datetime_org):
+    datetime_tmp = datetime(year = datetime_org.year, month = datetime_org.month, day = datetime_org.day, hour = datetime_org.hour, minute = datetime_org.minute + 1)
+    return datetime_tmp
+
+def helper_generate_raw_eventdata(event_type, event_name, start, end, has_spawnpoints, has_quests, bonus_lure_duration = None, spawns = [], bonuses = []):
+    try:
+        event_dict = {'name': event_name, 'type': event_type, 'start': start.strftime("%Y-%m-%d %H:%M"), 'end': end.strftime("%Y-%m-%d %H:%M"), 'has_spawnpoints': has_spawnpoints, 'has_quests': has_quests, 'bonuses': bonuses, 'bonus_lure_duration': bonus_lure_duration, 'spawns': spawns}
+        return event_dict
+    except Exception:
+        log.error("Test-error in helper_generate_raw_eventdata()")
+        log.exception("Exception info:")
+        return None
+
+def config_logging(logger, console_loglevel = logging.INFO):
+    # console logging configuration
+    formatter_console = logging.Formatter('[%(asctime)s] [%(name)12s] [%(levelname)7s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(console_loglevel)
+    console_handler.setFormatter(formatter_console)
+    logger.addHandler(console_handler)
+    
+    # set log level
+    logger.setLevel(logging.DEBUG)
+
+def log_teststep(teststep_number, log_str):
+    
+    if teststep_number == 0:
+        teststep_id = "init"
+    else:
+        teststep_id = teststep_number
+    log.info(f"TESTSTEP [{teststep_id}]: {log_str}")
+    return teststep_number + 1
+
+
+'''
+****************************************
+* main functions
+****************************************
+'''
+if __name__ == "__main__":
+    config_logging(log, console_loglevel = logging.DEBUG)
+    unittest.main()

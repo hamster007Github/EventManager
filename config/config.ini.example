@@ -1,0 +1,66 @@
+[general]
+; define the time to wait in-between checking for new events in seconds. default = 3600 (= 1 hour)
+sleep = 3600
+; option to delete events from MAD database, which are not part of EventWatcher plugin ['true' or 'false']
+delete_events = false
+; language for Telegram and Discrod notifications. ['en'(default) or 'de']
+language = en
+; optional. If you want to store .eventcache file in another folder, uncomment and set absolut path. Shall end with '/'
+#custom_eventcache_path = 
+
+; *******************************
+; * Pokemon reset configuration *
+; *******************************
+; option to automatically delete obsolete pokemon from MAD database on start and end of spawn event to enable MAD to rescan pokemon. ['true' or 'false' (default)]
+reset_pokemon_enable = false
+; define pokemon delete strategy. ['all'(default) or 'filtered']
+reset_pokemon_strategy = all
+
+; *******************************
+; * Quest reset configuration   *
+; *******************************
+; option to automatically delete quests from MAD database on start and/or end of quest changing event to enable MAD to rescan quests. ['true' or 'false' (default)]
+reset_quests_enable = false
+; define event types and if you want quests to reset for their start, end or both. [Available event types are 'event', 'community-day', 'spotlight-hour' and 'raid-hour']
+reset_quests_event_type = 
+; time window, in which quests would be scanned (regular and rescan). Used for inform users about possible rescan (24h, only full hours are supported). e.g. quest_rescan_timewindow = 02-18
+quest_rescan_timewindow = 
+; define event name text phrases, which shall be excluded for quest reset. Separate multiple event name text phrases with comma. Uncomment (remove #) to use.
+#reset_quests_exclude_events = go battle day
+
+; **********************************
+; * scanner configuration *
+; **********************************
+[scanner]
+; host adress. use localhost, if DB is executed on same server
+db_host = 
+; scanner database name
+db_name = 
+; database user (need select and delete access rights)
+db_user = 
+; database user passwort
+db_password = 
+; OS shell command, which should be executed on quest reset. e.g. reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
+#rescan_trigger_cmd = 
+
+; *******************************
+; * Telegram info configuration *
+; *******************************
+[telegram]
+; Enable or disable Telegram notification feature. ['true' or 'false' (default)]
+tg_info_enable = false
+; Telegram bot API token from @godfather. e.g. 12345678:abcdefghijklmnopqrstuvwxyz
+tg_bot_token = 
+; @username or id. Example: tg_chat_id = -12345678 -> @bruellhamster
+tg_chat_id = 
+
+; *******************************
+; * Discord info configuration *
+; *******************************
+[discord]
+; Enable or disable Discord notification feature. ['true' or 'false' (default)]
+dc_info_enable = false
+; Provide Discord Webhook Url. Separate multiple webhocks with comma. Example: dc_webhook_url = https://discord.xyz/asdf, https://discord.xyz/hjkl
+#dc_webhook_url = https://discord.xyz/asdf
+; Provide a name for the "Bot User"
+#dc_webhook_username = PoGo Quest bot
