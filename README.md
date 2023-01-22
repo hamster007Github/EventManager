@@ -123,4 +123,3 @@ You can have same event list as the eventwatcher plugin with this the [EventMana
 * [ ] remove dependencies to testenvironment for standard unit tests
 * [ ] Telegram/Discord notification for pokémon reset
 * [ ] check abstract class with different number arguments for function implementation
-* [ ] beautify src: split into different modules, remove unused code, add useful comments, add TBDs for follow-up activities
