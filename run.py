@@ -84,8 +84,13 @@ if __name__ == "__main__":
         file_loglevel = None
     config_logging(log, console_loglevel = console_loglevel, file_loglevel = file_loglevel)
     
-    log.info(f"Start EventManager...")
-    event_manager = eventmanager.EventManager()
-    event_manager.connect()
-    while(True):
-        event_manager.run()
+    try:
+        log.info(f"Start EventManager...")
+        event_manager = eventmanager.EventManager()
+        event_manager.connect()
+    except Exception as e:
+        log.error(f"Error in startup of EventManager (__init__ or connect()). Check configuration.")
+        log.exception("Exception info:")
+    else:
+        while(True):
+            event_manager.run()

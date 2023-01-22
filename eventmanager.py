@@ -93,9 +93,10 @@ class SimpleTelegramApi:
 
 
 class DbConnector():
-    def __init__(self, host, db_name, username, password):
+    def __init__(self, host, db_name, username, password, port=3306):
         self._db_connection = None
         self._host = host
+        self._port = port
         self._db_name = db_name
         self._username = username
         self._password = password
@@ -108,10 +109,11 @@ class DbConnector():
             # only create new connection, if not already a connection was created before
             if self._db_connection is None:
                 self._db_connection = mysql.connector.connect(
-                    host=self._host,
-                    user=self._username,
-                    passwd=self._password,
-                    database=self._db_name
+                    host = self._host,
+                    port = self._port,
+                    user = self._username,
+                    passwd = self._password,
+                    database = self._db_name
                 )
                 log.debug(f"DbConnector: SQL db connected successfully")
         except Error as e:
@@ -182,8 +184,8 @@ class ScannerConnector(metaclass=abc.ABCMeta):
         pass
 
 class MadConnector(ScannerConnector):
-    def __init__(self, db_host, db_name, db_username, db_password, rescan_trigger_command):
-        self._dbconnector = DbConnector(db_host, db_name, db_username, db_password)
+    def __init__(self, db_host, db_port, db_name, db_username, db_password, rescan_trigger_command):
+        self._dbconnector = DbConnector(host=db_host, port=db_port, db_name=db_name, username=db_username, password=db_password)
         self._rescan_trigger_command = rescan_trigger_command
     
     def reset_all_quests(self):
@@ -357,12 +359,8 @@ class EventManager():
         self._last_quest_reset_check = helper_time_now()
         self._last_event_update = datetime(2000, 1, 1, 0, 0, 0)
 
-        try:
-            self.tz_offset = round((helper_time_now() - datetime.utcnow()).total_seconds() / 3600)
-            self._load_config_parameter()
-        except Exception as e:
-            log.error(f"Exception initializing EventManager.")
-            log.exception("Exception info:")
+        self.tz_offset = round((helper_time_now() - datetime.utcnow()).total_seconds() / 3600)
+        self._load_config_parameter()
 
     def _load_config_parameter(self):
         # section [general]: general settings
@@ -400,7 +398,8 @@ class EventManager():
             self.__quests_reset_excludes_list = [quests_reset_exclude.strip() for quests_reset_exclude in quests_reset_excludes_str.split(',')]
         
         # section [scanner]: scanner settings
-        self.__cfg_db_host = self._config.get("scanner", "db_host", fallback=None)
+        self.__cfg_db_host = self._config.get("scanner", "db_host", fallback="localhost")
+        self.__cfg_db_port = self._config.getint("scanner", "db_port", fallback=3306)
         self.__cfg_db_name = self._config.get("scanner", "db_name", fallback=None)
         self.__cfg_db_user = self._config.get("scanner", "db_user", fallback=None)
         self.__cfg_db_password = self._config.get("scanner", "db_password", fallback=None)
@@ -414,15 +413,17 @@ class EventManager():
             self.__token = self._config.get("telegram", "tg_bot_token", fallback=None)
             tg_chat_id_str = self._config.get("telegram", "tg_chat_id", fallback=None)
             if self.__token is None or tg_chat_id_str is None:
-                log.error(f"TG options not set fully set in config.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{tg_chat_id_str}")
-                return False
+                error_str = f"TG options not set fully set in config.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{tg_chat_id_str}"
+                log.error(error_str)
+                raise ValueError(error_str)
             #convert parameter into list and remove whitespaces
             self.__tg_chat_id_list = [chat_id.strip() for chat_id in tg_chat_id_str.split(',')]
             quest_timewindow_str = self._config.get("general", "quest_rescan_timewindow")
             status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
             if status is False:
-                log.error(f"EventManager: Error while read parameter 'quest_rescan_timewindow' from config.ini. Please check value and pattern: quest_rescan_timewindow = ##-##")
-                return False
+                error_str = f"EventManager: Error while read parameter 'quest_rescan_timewindow' from config.ini. Please check value and pattern: quest_rescan_timewindow = ##-##"
+                log.error(error_str)
+                raise ValueError(error_str)
             self.__quest_timewindow_start_h = timewindow_list[0]
             self.__quest_timewindow_end_h = timewindow_list[1]
         
@@ -432,8 +433,10 @@ class EventManager():
             log.info(f"EventManager: Discord info feature activated")
             dc_webhook_url_str = self._config.get("discord", "dc_webhook_url", fallback=None)
             if dc_webhook_url_str is None:
-                log.error(f"EventManager: 'dc_webhook_url' not set in config.ini")
-                return False
+                error_str = f"EventManager: 'dc_webhook_url' not set in config.ini"
+                log.error(error_str)
+                raise ValueError(error_str)
+            
             #convert parameter into list and remove whitespaces
             self.__dc_webhook_url_list = [webhook_url.strip() for webhook_url in dc_webhook_url_str.split(',')]
             self.__dc_webook_username = self._config.get("discord", "dc_webhook_username", fallback="PoGo Event Bot")
@@ -708,7 +711,7 @@ class EventManager():
             log.exception("Exception info:")
 
     def connect(self):
-        self._madconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, self.__cfg_scanner_rescan_trigger_cmd)
+        self._madconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, self.__cfg_scanner_rescan_trigger_cmd)
         if(self.__tg_info_enable):
             self._api = SimpleTelegramApi(self.__token)
         #@todo: discord 

@@ -66,10 +66,14 @@ It is highly recommended to use virtual python environment.
 - `reset_quests_exclude_events` define event name text phrases, which shall be excluded for quest reset. Eventmanager checks, if an event name contain matching text. Can be used to ignore Go battle day, which only has special research and no changing pokestop quests. Separate multiple event name text phrases with comma.
 
 ## scanner section
-- `db_host` scanner host adress (default: localhost)
+- `db_host` (optional) scanner database host adress (default: localhost)
+- `db_port` (optional) scanner database port (default: 3306)
 - `db_name` scanner database name
 - `db_user` database username (need select and delete access rights for `db_name`)
 - `db_password` password of `db_user`
+- `rescan_trigger_cmd` (optional) OS shell command, which should be executed on quest reset. examples:
+  - MAD 'apply settings' to restart worker: reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
+  - MAD restart: you need your own script, which matching your setup (depends on how you start MAD (pm2, systemd, ...)
 
 ## telegram section
 This feature informs a user, group or channel about quest resets.

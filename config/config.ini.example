@@ -32,15 +32,17 @@ quest_rescan_timewindow =
 ; * scanner configuration *
 ; **********************************
 [scanner]
-; host adress. use localhost, if DB is executed on same server
-db_host = 
+; (optional) host adress. use localhost, if DB is executed on same server
+#db_host = 
+; (optional) port of database. Set, if you use a non-default port. default: 3306
+#db_port = 
 ; scanner database name
 db_name = 
 ; database user (need select and delete access rights)
 db_user = 
 ; database user passwort
 db_password = 
-; OS shell command, which should be executed on quest reset. e.g. reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
+; (optional) OS shell command, which should be executed on quest reset. e.g. reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
 #rescan_trigger_cmd = 
 
 ; *******************************
