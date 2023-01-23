@@ -30,17 +30,35 @@ The [pogoinfo](https://github.com/ccev/pogoinfo) from project from [ccev](https:
 All event information are grabed from there. Many thanks, ccev!
 
 # Installation
-It is highly recommended to use virtual python environment.
-- create environment: `virtualenv -p python3 ~/VENVFOLDER/eventmanager_env`
+It is highly recommended to use virtual python environment. The following examples uses the linux user `myuser`. 
+- create virtual python environment. Example: `virtualenv -p python3 home/myuser/venv/eventmanager_env`
+- switch to a /home/user directory, where EventManager should be installed. Example: `cd /home/myuser`
 - clone this branch: `git clone https://github.com/hamster007Github/EventManager.git`
-- cd EventManager
-- install dependencies:`~/VENVFOLDER/eventmanager_env/bin/pip3 install -r requirements.txt`
+- `cd EventManager`
+- install dependencies:`home/myuser/venv/eventmanager_env/bin/pip3 install -r requirements.txt`
 - `cp config/config.ini.example config/config.ini`
 - adapt config/config.ini for your needs See [config.ini options](#config.inioptions)
 
 # run
-- script call: `~/VENVFOLDER/eventwatcher_env/bin/python3 run.py`
-- available arguments for logging: `~/VENVFOLDER/eventwatcher_env/bin/python3 run.py -help`
+- switch to Eventmanager folder. Example: `cd /home/myuser/EventManager`
+- script call: `home/myuser/venv/eventwatcher_env/bin/python3 run.py`
+- get available arguments for logging: `home/myuser/venv/eventwatcher_env/bin/python3 run.py -help`
+
+## PM2 ecosystem file
+Based on the examples in [Installation](#Installation) you can use following ecosystem file:
+```
+{
+    name: 'EventManager',
+    script: 'run.py',
+    cwd: '/home/myuser/EventManager',
+    interpreter:'/home/myuser/venv/eventmanager_env/bin/python3',
+    instances: 1,
+    autorestart: true,
+    restart_delay: 10000,
+    watch: false,
+    max_memory_restart: '100M'
+}
+```
 
 # config.ini options
 ### general section

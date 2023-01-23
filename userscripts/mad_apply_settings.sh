@@ -3,8 +3,7 @@
 ###########################################################
 # User configuration
 ###########################################################
-# madmin apply settings/ reload urls
-# for adding multiple urls because of multiple instances -> list the urls separated with whitespaces
+# madmin apply settings / reload url
 # Examples for madmin reload urls (madmin runing on same server):
 #  - without madmin passwort (e.g. using nginx passwort instead):  apply_settings_url="http://localhost:5000/reload"
 #  - with madmin passwort: apply_settings_url="-u madmin:password http://localhost:5000/reload"
@@ -19,9 +18,9 @@ http_response=$(curl -s -o /dev/null -w '%{http_code}' $apply_settings_url)
 
 if [ $http_response != "302" ]; then
     # handle error
-    echo "FAILED with code:$http_response"
+    echo "mad_apply_settings.sh FAILED with http-code:$http_response"
     exit 1
 else
-    echo "Ok"
+    echo "mad_apply_settings.sh executed successfully"
     exit 0
 fi
