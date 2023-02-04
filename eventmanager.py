@@ -424,7 +424,7 @@ class EventManager():
             # check if there are missing event entries in the db and if so, create them
             for event_type_name in self.type_to_name.values():
                 if event_type_name not in events_in_db.keys():
-                    self._madconnector.insert_event(event_type_name)
+                    self._madconnector.insert_event(event_type_name, DEFAULT_TIME, DEFAULT_TIME, DEFAULT_LURE_DURATION)
                     events_in_db[event_type_name] = {
                         "event_start": DEFAULT_TIME,
                         "event_end": DEFAULT_TIME

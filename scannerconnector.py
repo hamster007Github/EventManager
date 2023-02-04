@@ -146,13 +146,13 @@ class MadConnector(ScannerConnector):
         db_events = self._dbconnector.execute_query(sql_query)
         return db_events
     
-    def insert_event(self, event_type_name):
-        log.info(f"MadConnector: insert event {event_type_name} with default data")
-        sql_query = f"INSERT INTO trs_event (event_name, event_start, event_end, event_lure_duration) VALUES('{event_type_name}', '{DEFAULT_TIME}', '{DEFAULT_TIME}', {DEFAULT_LURE_DURATION});"
+    def insert_event(self, event_type_name, event_start, event_end, event_lure_duration):
+        log.info(f"MadConnector: insert event {event_type_name} with start:{event_start}, end:{event_end}, lure_duration:{event_lure_duration}")
+        sql_query = f"INSERT INTO trs_event (event_name, event_start, event_end, event_lure_duration) VALUES('{event_type_name}', '{event_start}', '{event_end}', {event_lure_duration});"
         self._dbconnector.execute_query(sql_query, commit=True)
     
     def update_event(self, event_type_name, event_start, event_end, event_lure_duration):
-        log.info(f'MadConnector: updated event {event_type_name} with start:{event_start}, end:{event_end}, lure_duration:{event_lure_duration}')
+        log.info(f"MadConnector: updated event {event_type_name} with start:{event_start}, end:{event_end}, lure_duration:{event_lure_duration}")
         sql_query = f"UPDATE trs_event SET event_start='{event_start}', event_end='{event_end}', event_lure_duration={event_lure_duration} WHERE event_name = '{event_type_name}';"
         self._dbconnector.execute_query(sql_query, commit=True)
     

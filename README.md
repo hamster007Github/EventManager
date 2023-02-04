@@ -30,22 +30,22 @@ The [pogoinfo](https://github.com/ccev/pogoinfo) from project from [ccev](https:
 All event information are grabed from there. Many thanks, ccev!
 
 # Installation
-It is highly recommended to use virtual python environment. The following examples uses the linux user `myuser`. 
-- create virtual python environment. Example: `virtualenv -p python3 home/myuser/venv/eventmanager_env`
+It is highly recommended to use virtual python environment.
+- create virtual python environment. Example: `python3 -m venv ~/venv/eventmanager_env`
 - switch to a /home/user directory, where EventManager should be installed. Example: `cd /home/myuser`
 - clone this branch: `git clone https://github.com/hamster007Github/EventManager.git`
 - `cd EventManager`
-- install dependencies:`home/myuser/venv/eventmanager_env/bin/pip3 install -r requirements.txt`
+- install dependencies:`~/venv/eventmanager_env/bin/pip3 install -r requirements.txt`
 - `cp config/config.ini.example config/config.ini`
 - adapt config/config.ini for your needs See [config.ini options](#config.inioptions)
 
 # run
-- switch to Eventmanager folder. Example: `cd /home/myuser/EventManager`
-- script call: `home/myuser/venv/eventwatcher_env/bin/python3 run.py`
-- get available arguments for logging: `home/myuser/venv/eventwatcher_env/bin/python3 run.py -help`
+- switch to Eventmanager folder. Example: `cd ~/EventManager`
+- script call: `~/venv/eventmanager_env/bin/python3 run.py`
+- get available arguments for logging: `~/venv/eventmanager_env/bin/python3 run.py -help`
 
 ## PM2 ecosystem file
-Based on the examples in [Installation](#Installation) you can use following ecosystem file:
+Based on the examples in [Installation](#Installation) you can use following ecosystem file (linux user `myuser`):
 ```
 {
     name: 'EventManager',
@@ -130,8 +130,8 @@ You can provide your own local_custom.json with locals. You can also include new
 # Unittests (devs only)
 Only needed to support active development.
 - adapt /test/config_test.ini (TBD)
-- run tests (clean console output): `~/VENVFOLDER/eventwatcher_env/bin/python3 -m unittest -v`
-- (optional) run tests incl. debug console logging: `~/VENVFOLDER/eventwatcher_env/bin/python3 -m test.test -v`
+- run tests (clean console output): `~/venv/eventmanager_env/bin/python3 -m unittest -v`
+- (optional) run tests incl. debug console logging: `~/venv/eventmanager_env/bin/python3 -m test.test -v`
 Remark: activate test cases from `TestEventManagerWithTestenvironment` only, if you know what you are doing :)
 
 # madmin integration
