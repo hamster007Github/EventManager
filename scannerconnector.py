@@ -129,16 +129,15 @@ class MadConnector(ScannerConnector):
     
     def reset_all_pokemon(self):
         sql_query = "TRUNCATE pokemon"
-        sql_args = None
         dbreturn = self._dbconnector.execute_query(sql_query, commit=True)
-        log.info(f'MadConnector: all pokemon deleted by SQL query: {sql_query} arguments: {sql_args} return: {dbreturn}')
+        log.info(f'MadConnector: all pokemon deleted by SQL query: {sql_query} return: {dbreturn}')
     
     def reset_filtered_pokemon(self, eventchange_datetime_UTC):
         # SQL query: delete mon
         eventchange_timestamp = eventchange_datetime_UTC.strftime("%Y-%m-%d %H:%M:%S")
-        sql_query = f"DELETE FROM pokemon WHERE last_modified < {eventchange_timestamp} AND disappear_time > {eventchange_timestamp}"
+        sql_query = f"DELETE FROM pokemon WHERE last_modified < '{eventchange_timestamp}' AND disappear_time > '{eventchange_timestamp}'"
         dbreturn = self._dbconnector.execute_query(sql_query, commit=True)
-        log.info(f'MadConnector: filtered pokemon deleted by SQL query: {sql_query} arguments: {sql_args} return: {dbreturn}')
+        log.info(f'MadConnector: filtered pokemon deleted by SQL query: {sql_query} return: {dbreturn}')
     
     def get_events(self):
         log.info(f"MadConnector: get event")
