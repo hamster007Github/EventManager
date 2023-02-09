@@ -69,9 +69,9 @@ Based on the examples in [Installation](#Installation) you can use following eco
 **Pokemon reset**:
 
 - `reset_pokemon_enable` option to automatically delete obsolete pokemon from MAD database on start and end of pokemon changing event to enable MAD to rescan pokemon. true: enable function, false: disable function (default)
-- `reset_pokemon_strategy` define pokemon delete strategy. ['all'(default) or 'filtered']
-  - `all` delete all pokemon from databasse by SQL TRUNCATE query. Highly recommended for bigger instances
-  - `filtered` delete only pokemon from database by SQL DELETE query, which are effected by eventchange. Can result in database lock issues (depends on server performance / database size
+- `reset_pokemon_strategy` define pokemon delete strategy. ['all' or 'filtered'(default)]
+  - `all` delete all pokemon from databasse by SQL TRUNCATE query. Will not work with MAD.
+  - `filtered` delete only pokemon from database by SQL DELETE query, which are effected by eventchange. Hint: cleanup your pokemon table regular, otherwise delete took to much time.
 
 **Quest reset**:
 

@@ -180,7 +180,7 @@ class EventManager():
         self.__eventcache_path = self._config.get("general", "custom_eventcache_path", fallback="").strip()
         # pokemon reset configuration parameter
         self.__reset_pokemon_enable = self._config.getboolean("general", "reset_pokemon_enable", fallback=False)
-        self.__reset_pokemon_strategy = self._config.get("general", "reset_pokemon_strategy", fallback="all").strip()
+        self.__reset_pokemon_strategy = self._config.get("general", "reset_pokemon_strategy", fallback="filtered").strip()
         self.__reset_pokemon_restart_app = self._config.getboolean("general", "reset_pokemon_restart_app", fallback=False)
         # quest reset configuration parameter
         self.__reset_quests_enable = self._config.getboolean("general", "reset_quests_enable", fallback=False)

@@ -13,8 +13,8 @@ language = en
 ; *******************************
 ; option to automatically delete obsolete pokemon from MAD database on start and end of spawn event to enable MAD to rescan pokemon. ['true' or 'false' (default)]
 reset_pokemon_enable = false
-; define pokemon delete strategy. ['all'(default) or 'filtered']
-reset_pokemon_strategy = all
+; define pokemon delete strategy. ['all' or 'filtered'(default)]
+reset_pokemon_strategy = filtered
 
 ; *******************************
 ; * Quest reset configuration   *
