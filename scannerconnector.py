@@ -11,6 +11,8 @@ import abc
 # MYSQL database connection
 import mysql.connector
 from mysql.connector import Error
+# url handling
+import requests
 # logging
 import logging
 
@@ -118,8 +120,9 @@ class ScannerConnector(metaclass=abc.ABCMeta):
         pass
 
 class MadConnector(ScannerConnector):
-    def __init__(self, db_host, db_port, db_name, db_username, db_password, rescan_trigger_command):
+    def __init__(self, db_host, db_port, db_name, db_username, db_password, reload_port_list = None, rescan_trigger_command = None):
         self._dbconnector = DbConnector(host=db_host, port=db_port, db_name=db_name, username=db_username, password=db_password)
+        self._reload_port_list = reload_port_list
         self._rescan_trigger_command = rescan_trigger_command
     
     def reset_all_quests(self):
@@ -161,13 +164,29 @@ class MadConnector(ScannerConnector):
         self._dbconnector.execute_query(sql_query, commit=True)
     
     def trigger_rescan(self):
-        log.info("MadConnector: trigger rescan by rescan trigger command")
+        # call apply_settings, if trigger ports are set
         try:
-            exit_code = os.system(self._rescan_trigger_command)
-            if exit_code != 0:
-                log.error(f"run rescan trigger command '{self._rescan_trigger_command}' failed with exit code:{exit_code}")
-            else:
-                log.debug(f"run rescan trigger command '{self._rescan_trigger_command}' successfully")
+            if self._reload_port_list is not None:
+                for trigger_port in self._reload_port_list:
+                    log.info(f"MadConnector: trigger madmin reload ('apply_settings') for configurated port: '{trigger_port}'")
+                    reload_url = f"http://localhost:{trigger_port}/reload"
+                    result = requests.get(reload_url)
+                    if result.status_code != 200:
+                        log.error(f"MadConnector: trigger madmin reload ('apply_settings') for configurated port: '{trigger_port}' failed with status-code {result.status_code}")
+                    else:
+                        log.info(f"MadConnector: trigger madmin reload ('apply_settings') for configurated port '{trigger_port}' successful")
         except Exception as e:
-            log.error("MadConnector: error while running rescan trigger command '{self._rescan_trigger_command}'")
+            log.error(f"MadConnector: error while trigger madmin reload ('apply_settings') for configurated ports: {self._reload_port_list}")
+            log.exception("Exception info:")
+        # call usercommand/userscript, if configurated
+        try:
+            if self._rescan_trigger_command is not None:
+                log.info("MadConnector: trigger rescan by user rescan trigger command")
+                exit_code = os.system(self._rescan_trigger_command)
+                if exit_code != 0:
+                    log.error(f"run rescan trigger command '{self._rescan_trigger_command}' failed with exit code:{exit_code}")
+                else:
+                    log.debug(f"run rescan trigger command '{self._rescan_trigger_command}' successfully")
+        except Exception as e:
+            log.error(f"MadConnector: error while running rescan trigger command '{self._rescan_trigger_command}'")
             log.exception("Exception info:") 

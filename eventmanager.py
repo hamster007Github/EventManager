@@ -212,8 +212,13 @@ class EventManager():
         self.__cfg_db_name = self._config.get("scanner", "db_name", fallback=None)
         self.__cfg_db_user = self._config.get("scanner", "db_user", fallback=None)
         self.__cfg_db_password = self._config.get("scanner", "db_password", fallback=None)
-        self.__cfg_scanner_rescan_trigger_cmd = self._config.get("scanner", "rescan_trigger_cmd", fallback="exit 0")
-        
+        self.__cfg_scanner_rescan_trigger_cmd = self._config.get("scanner", "rescan_trigger_cmd", fallback=None)
+        mad_reload_ports_str = self._config.get("scanner", "rescan_trigger_madmin_ports", fallback=None)
+        if mad_reload_ports_str is None:
+            self.__cfg_mad_reload_ports = None
+        else:
+            # split comma seperated port list and create python list
+            self.__cfg_mad_reload_ports = [mad_reload_port.strip() for mad_reload_port in mad_reload_ports_str.split(',')]
         # section [telegram]: telegram feature settings
         self.__tg_info_enable = self._config.getboolean("telegram", "tg_info_enable", fallback=False)
         if self.__tg_info_enable:
@@ -225,7 +230,7 @@ class EventManager():
                 error_str = f"TG options not set fully set in config.ini: 'tg_bot_token':{self.__token} 'tg_chat_id':{tg_chat_id_str}"
                 log.error(error_str)
                 raise ValueError(error_str)
-            #convert parameter into list and remove whitespaces
+            # split comma seperated chat id list and create python list
             self.__tg_chat_id_list = [chat_id.strip() for chat_id in tg_chat_id_str.split(',')]
             quest_timewindow_str = self._config.get("general", "quest_rescan_timewindow")
             status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
@@ -514,7 +519,7 @@ class EventManager():
             log.exception("Exception info:")
 
     def connect(self):
-        self._madconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, self.__cfg_scanner_rescan_trigger_cmd)
+        self._madconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, reload_port_list = self.__cfg_mad_reload_ports, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
         if(self.__tg_info_enable):
             self._api = SimpleTelegramApi(self.__token)
         #@todo: discord 

@@ -89,8 +89,9 @@ Based on the examples in [Installation](#Installation) you can use following eco
 - `db_name` scanner database name
 - `db_user` database username (need select and delete access rights for `db_name`)
 - `db_password` password of `db_user`
-- `rescan_trigger_cmd` (optional) OS shell command, which should be executed on quest reset. examples:
-  - MAD 'apply settings' to restart worker: reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
+- `rescan_trigger_madmin_ports` madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma. e.g. rescan_trigger_madmin_ports = 5000, 5001. If you don't want to use reload ('apply settings') -> comment it out.
+- `rescan_trigger_cmd` (optional) user OS shell command, which should be executed on quest reset. Can also be a shellscript with custom restart MAD. Possible examples:
+  - MAD 'apply settings' on different server to restart worker: reset_trigger_cmd = sh userscripts/mad_custom_apply_settings.sh
   - MAD restart: you need your own script, which matching your setup (depends on how you start MAD (pm2, systemd, ...)
 
 ## telegram section
