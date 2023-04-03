@@ -13,6 +13,7 @@ import mysql.connector
 from mysql.connector import Error
 # url handling
 import requests
+from requests.auth import HTTPBasicAuth
 # logging
 import logging
 
@@ -61,7 +62,7 @@ class DbConnector():
         if self._db_connection is not None:
             self._db_connection.close()
             self._db_connection = None
-    
+
     def execute_query(self, query, commit=False, disconnect=True):
         result = None
         try:
@@ -82,7 +83,7 @@ class DbConnector():
             log.exception("Exception info:")
             self._disconnect()
             return None
-        
+
         return result
 
 
@@ -94,7 +95,7 @@ class ScannerConnector(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def reset_all_pokemon(self):
         pass
-    
+
     @abc.abstractmethod
     def reset_filtered_pokemon(self, eventchange_datetime_UTC):
         pass
@@ -124,45 +125,45 @@ class MadConnector(ScannerConnector):
         self._dbconnector = DbConnector(host=db_host, port=db_port, db_name=db_name, username=db_username, password=db_password)
         self._reload_port_list = reload_port_list
         self._rescan_trigger_command = rescan_trigger_command
-    
+
     def reset_all_quests(self):
         sql_query = "TRUNCATE trs_quest"
         dbreturn = self._dbconnector.execute_query(sql_query, commit=True)
         log.info(f'MadConnector: quests deleted by SQL query: {sql_query} return: {dbreturn}')
-    
+
     def reset_all_pokemon(self):
         sql_query = "TRUNCATE pokemon"
         dbreturn = self._dbconnector.execute_query(sql_query, commit=True)
         log.info(f'MadConnector: all pokemon deleted by SQL query: {sql_query} return: {dbreturn}')
-    
+
     def reset_filtered_pokemon(self, eventchange_datetime_UTC):
         # SQL query: delete mon
         eventchange_timestamp = eventchange_datetime_UTC.strftime("%Y-%m-%d %H:%M:%S")
         sql_query = f"DELETE FROM pokemon WHERE last_modified < '{eventchange_timestamp}' AND disappear_time > '{eventchange_timestamp}'"
         dbreturn = self._dbconnector.execute_query(sql_query, commit=True)
         log.info(f'MadConnector: filtered pokemon deleted by SQL query: {sql_query} return: {dbreturn}')
-    
+
     def get_events(self):
         log.info(f"MadConnector: get event")
         sql_query = "SELECT event_name, event_start, event_end FROM trs_event;"
         db_events = self._dbconnector.execute_query(sql_query)
         return db_events
-    
+
     def insert_event(self, event_type_name, event_start, event_end, event_lure_duration):
         log.info(f"MadConnector: insert event {event_type_name} with start:{event_start}, end:{event_end}, lure_duration:{event_lure_duration}")
         sql_query = f"INSERT INTO trs_event (event_name, event_start, event_end, event_lure_duration) VALUES('{event_type_name}', '{event_start}', '{event_end}', {event_lure_duration});"
         self._dbconnector.execute_query(sql_query, commit=True)
-    
+
     def update_event(self, event_type_name, event_start, event_end, event_lure_duration):
         log.info(f"MadConnector: updated event {event_type_name} with start:{event_start}, end:{event_end}, lure_duration:{event_lure_duration}")
         sql_query = f"UPDATE trs_event SET event_start='{event_start}', event_end='{event_end}', event_lure_duration={event_lure_duration} WHERE event_name = '{event_type_name}';"
         self._dbconnector.execute_query(sql_query, commit=True)
-    
+
     def delete_event(self, event_type_name):
         log.info(f"MadConnector: deleted event {event_type_name}")
         sql_query = f"DELETE FROM trs_event WHERE event_name='{event_type_name}';"
         self._dbconnector.execute_query(sql_query, commit=True)
-    
+
     def trigger_rescan(self):
         # call apply_settings, if trigger ports are set
         if self._reload_port_list is not None:
@@ -189,4 +190,75 @@ class MadConnector(ScannerConnector):
                     log.info(f"run rescan trigger command '{self._rescan_trigger_command}' successfully")
             except Exception:
                 log.error(f"MadConnector: exception while running rescan trigger command '{self._rescan_trigger_command}'")
+                log.exception("Exception info:")
+
+class RdmConnector(ScannerConnector):
+    def __init__(self, api_url, api_username, api_password, assignment_group, rescan_trigger_command = None):
+        self._api_url = api_url
+        self._api_auth = HTTPBasicAuth(api_username, api_password)
+        self._assignment_group = assignment_group
+        self._rescan_trigger_command = rescan_trigger_command
+
+    def _api_set_request(self, api_parameter_str):
+        result = False
+        try:
+            url = self._api_url + "/api/set_data?" + api_parameter_str
+            result = requests.get(url, auth=self._api_auth)
+            if (result.status_code != 200):
+                log.error(f"RdmConnector: _api_set_request '{url}' failed with status-code {result.status_code}")
+            else:
+                log.debug(f"RdmConnector: _api_set_request '{url}' successful. Result:{result}")
+                result = True;
+        except requests.ConnectionError:
+            log.error(f"RdmConnector: connection error for _api_set_request '{url}'. Please check your 'rdm_api_url', 'rdm_api_username' and 'rdm_api_password' settings or availability of RDM.")
+        except Exception:
+            log.error(f"RdmConnector: exception while _api_set_request '{url}'")
+            log.exception("Exception info:")
+        return result
+
+    def reset_all_quests(self):
+        request_parameter = "clear_all_quests=true"
+        if self._api_set_request(request_parameter):
+            log.info(f'RdmConnector: quests deleted by API successful')
+        else:
+            log.error(f'RdmConnector: quests deleted by API failed')
+
+    def reset_all_pokemon(self):
+        #@TODO RDM
+        log.info(f"RdmConnector: reset_all_pokemon not supported yet -> skip")
+
+    def reset_filtered_pokemon(self, eventchange_datetime_UTC):
+        #@TODO RDM
+        log.info(f"RdmConnector: reset_filtered_pokemon not supported yet -> skip")
+
+    def get_events(self):
+        log.debug(f"RdmConnector: get_events not supported -> skip")
+        return {}
+
+    def insert_event(self, event_type_name, event_start, event_end, event_lure_duration):
+        log.debug(f"RdmConnector: insert_event not supported -> skip")
+
+    def update_event(self, event_type_name, event_start, event_end, event_lure_duration):
+        log.debug(f"RdmConnector: update_event not supported -> skip")
+
+    def delete_event(self, event_type_name):
+        log.debug(f"RdmConnector: delete_event not supported -> skip")
+
+    def trigger_rescan(self):
+        # start re-quest assigment group
+        request_parameter = f"assignmentgroup_start=true&assignmentgroup_name={self._assignment_group}"
+        if self._api_set_request(request_parameter):
+            log.info(f'RdmConnector: start re-quest by API start assignment group "{self._assignment_group}" successful')
+        else:
+            log.error(f'RdmConnector: start re-quest by API start assignment group "{self._assignment_group}" failed')
+        # call usercommand/userscript, if configurated
+        if self._rescan_trigger_command is not None:
+            try:
+                exit_code = os.system(self._rescan_trigger_command)
+                if exit_code != 0:
+                    log.error(f"run rescan trigger command '{self._rescan_trigger_command}' failed with exit code:{exit_code}")
+                else:
+                    log.info(f"run rescan trigger command '{self._rescan_trigger_command}' successfully")
+            except Exception:
+                log.error(f"RdmConnector: exception while running rescan trigger command '{self._rescan_trigger_command}'")
                 log.exception("Exception info:")

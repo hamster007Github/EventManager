@@ -27,6 +27,7 @@ from string import Template
 # EventManager modules
 from simpletelegramapi import SimpleTelegramApi
 from scannerconnector import MadConnector
+from scannerconnector import RdmConnector
 
 '''
 ****************************************
@@ -205,20 +206,30 @@ class EventManager():
             self.__quests_reset_excludes_list = None
         else:
             self.__quests_reset_excludes_list = [quests_reset_exclude.strip() for quests_reset_exclude in quests_reset_excludes_str.split(',')]
-        
+
         # section [scanner]: scanner settings
-        self.__cfg_db_host = self._config.get("scanner", "db_host", fallback="localhost")
-        self.__cfg_db_port = self._config.getint("scanner", "db_port", fallback=3306)
-        self.__cfg_db_name = self._config.get("scanner", "db_name", fallback=None)
-        self.__cfg_db_user = self._config.get("scanner", "db_user", fallback=None)
-        self.__cfg_db_password = self._config.get("scanner", "db_password", fallback=None)
-        self.__cfg_scanner_rescan_trigger_cmd = self._config.get("scanner", "rescan_trigger_cmd", fallback=None)
-        mad_reload_ports_str = self._config.get("scanner", "rescan_trigger_madmin_ports", fallback=None)
-        if mad_reload_ports_str is None:
-            self.__cfg_mad_reload_ports = None
+        self.__cfg_scanner = self._config.get("scanner", "scanner", fallback="mad")
+        if self.__cfg_scanner == "rdm":
+            self.__cfg_rdm_api_url = self._config.get("scanner", "rdm_api_url", fallback=None)
+            self.__cfg_rdm_api_user = self._config.get("scanner", "rdm_api_user", fallback=None)
+            self.__cfg_rdm_api_password = self._config.get("scanner", "rdm_api_password", fallback=None)
+            self.__cfg_rdm_assignment_group = self._config.get("scanner", "rdm_assignment_group", fallback=None)
+            #@TODO check parameters for None and raise exception
         else:
-            # split comma seperated port list and create python list
-            self.__cfg_mad_reload_ports = [mad_reload_port.strip() for mad_reload_port in mad_reload_ports_str.split(',')]
+            self.__cfg_db_host = self._config.get("scanner", "db_host", fallback="localhost")
+            self.__cfg_db_port = self._config.getint("scanner", "db_port", fallback=3306)
+            self.__cfg_db_name = self._config.get("scanner", "db_name", fallback=None)
+            self.__cfg_db_user = self._config.get("scanner", "db_user", fallback=None)
+            self.__cfg_db_password = self._config.get("scanner", "db_password", fallback=None)
+            #@TODO check parameters for None and raise exception
+            mad_reload_ports_str = self._config.get("scanner", "rescan_trigger_madmin_ports", fallback=None)
+            if mad_reload_ports_str is None:
+                self.__cfg_mad_reload_ports = None
+            else:
+                # split comma seperated port list and create python list
+                self.__cfg_mad_reload_ports = [mad_reload_port.strip() for mad_reload_port in mad_reload_ports_str.split(',')]
+        self.__cfg_scanner_rescan_trigger_cmd = self._config.get("scanner", "rescan_trigger_cmd", fallback=None)
+
         # section [telegram]: telegram feature settings
         self.__tg_info_enable = self._config.getboolean("telegram", "tg_info_enable", fallback=False)
         if self.__tg_info_enable:
@@ -240,7 +251,7 @@ class EventManager():
                 raise ValueError(error_str)
             self.__quest_timewindow_start_h = timewindow_list[0]
             self.__quest_timewindow_end_h = timewindow_list[1]
-        
+
         # section [discord]: 
         self.__dc_info_enable = self._config.getboolean("discord", "dc_info_enable", fallback=False)
         if self.__dc_info_enable:
@@ -250,7 +261,7 @@ class EventManager():
                 error_str = f"EventManager: 'dc_webhook_url' not set in config.ini"
                 log.error(error_str)
                 raise ValueError(error_str)
-            
+
             #convert parameter into list and remove whitespaces
             self.__dc_webhook_url_list = [webhook_url.strip() for webhook_url in dc_webhook_url_str.split(',')]
             self.__dc_webook_username = self._config.get("discord", "dc_webhook_username", fallback="PoGo Event Bot")
@@ -303,21 +314,27 @@ class EventManager():
             time = time + timedelta(hours=self.tz_offset)
         return time
 
-    def _get_local_tg_rescan_msg(self):
+    def _is_inside_request_timewindow(self):
+        request_timewindow = None
         now = helper_time_now()
         first_rescan_time = now.replace(hour=self.__quest_timewindow_start_h, minute=0)
         latest_rescan_time = now.replace(hour=self.__quest_timewindow_end_h, minute=0)
-        if now < first_rescan_time:     # quest changed before quest rescan timewindow
-            rescan_str = self._local['tg_questrescan_before'][self.__language]
-        elif now < latest_rescan_time:  # quest changed during quest rescan timewindow
-            rescan_str = self._local['tg_questrescan_during'][self.__language]
-        else:                           # quest changed after quest rescan timewindow
-            rescan_str = self._local['tg_questrescan_after'][self.__language]
+        if now < first_rescan_time or now > latest_rescan_time:
+            request_timewindow = False
+        else:
+            request_timewindow = True
+        return request_timewindow
+
+    def _get_local_tg_rescan_msg(self, is_request_timewindow):
+        if is_request_timewindow:
+            rescan_str = self._local['tg_questrescan_inside'][self.__language]
+        else:
+            rescan_str = self._local['tg_questrescan_outside'][self.__language]
         return rescan_str
 
-    def _send_tg_info_questreset(self, event_name, event_change_str):
+    def _send_tg_info_questreset(self, event_name, event_change_str, is_request_timewindow):
         if self.__tg_info_enable:
-            rescan_str = self._get_local_tg_rescan_msg()
+            rescan_str = self._get_local_tg_rescan_msg(is_request_timewindow)
             event_trigger = self._local[event_change_str][self.__language]
             info_msg = Template(self._local['tg_questreset_tmpl'][self.__language]).safe_substitute(event_trigger=event_trigger, event_name=event_name, rescan_str=rescan_str)
             for chat_id in self.__tg_chat_id_list:
@@ -352,9 +369,9 @@ class EventManager():
 
     def _reset_pokemon(self, eventchange_datetime_UTC):
         if self.__reset_pokemon_strategy == "filtered":
-            self._madconnector.reset_filtered_pokemon(eventchange_datetime_UTC)
+            self._scannerconnector.reset_filtered_pokemon(eventchange_datetime_UTC)
         else:
-            self._madconnector.reset_all_pokemon()
+            self._scannerconnector.reset_all_pokemon()
 
     def _check_pokemon_resets(self):
         log.info("check pokemon changing events")
@@ -394,19 +411,23 @@ class EventManager():
                     if event.check_event_start(self._last_quest_reset_check, now):
                         log.info(f'EventManager: event start detected for event {event.name} ({event.etype}) -> reset quests')
                         # remove all quests from MAD DB
-                        self._madconnector.reset_all_quests()
-                        self._madconnector.trigger_rescan()
-                        self._send_tg_info_questreset(event.name, "start")
-                        self._send_dc_info_questreset(event.name, "start")
+                        self._scannerconnector.reset_all_quests()
+                        is_request_timewindow = self._is_inside_request_timewindow()
+                        if is_request_timewindow:
+                            self._scannerconnector.trigger_rescan()
+                        self._send_tg_info_questreset(event.name, "start", is_request_timewindow)
+                        self._send_dc_info_questreset(event.name, "start",)
                         break
                 # event end during last check?
                 if "end" in self.__quests_reset_types.get(event.etype, []):
                     if event.check_event_end(self._last_quest_reset_check, now):
                         log.info(f'EventManager: event end detected for event {event.name} ({event.etype}) -> reset quests')
                         # remove all quests from MAD DB
-                        self._madconnector.reset_all_quests()
-                        self._madconnector.trigger_rescan()
-                        self._send_tg_info_questreset(event.name, "end")
+                        self._scannerconnector.reset_all_quests()
+                        is_request_timewindow = self._is_inside_request_timewindow()
+                        if is_request_timewindow:
+                            self._scannerconnector.trigger_rescan()
+                        self._send_tg_info_questreset(event.name, "end", is_request_timewindow)
                         self._send_dc_info_questreset(event.name, "end")
                         break
             self._last_quest_reset_check = now
@@ -418,7 +439,7 @@ class EventManager():
         log.info("Check spawnpoint changing events")
         try:
             # read current event entries from scanner db
-            db_events = self._madconnector.get_events()
+            db_events = self._scannerconnector.get_events()
             events_in_db = {}
             for db_event in db_events:
                 events_in_db[db_event["event_name"]] = {
@@ -429,7 +450,7 @@ class EventManager():
             # check if there are missing event entries in the db and if so, create them
             for event_type_name in self.type_to_name.values():
                 if event_type_name not in events_in_db.keys():
-                    self._madconnector.insert_event(event_type_name, DEFAULT_TIME, DEFAULT_TIME, DEFAULT_LURE_DURATION)
+                    self._scannerconnector.insert_event(event_type_name, DEFAULT_TIME, DEFAULT_TIME, DEFAULT_LURE_DURATION)
                     events_in_db[event_type_name] = {
                         "event_start": DEFAULT_TIME,
                         "event_end": DEFAULT_TIME
@@ -450,7 +471,7 @@ class EventManager():
                         event_end = event.end.strftime('%Y-%m-%d %H:%M:%S')
                         event_lure_duration = event.bonus_lure_duration if event.bonus_lure_duration is not None else DEFAULT_LURE_DURATION
                         event_name = self.type_to_name.get(event.etype, "Others")
-                        self._madconnector.update_event(event_name, event_start, event_end, event_lure_duration)
+                        self._scannerconnector.update_event(event_name, event_start, event_end, event_lure_duration)
 
                     updated_mad_events.append(event.etype)
 
@@ -458,7 +479,7 @@ class EventManager():
             if self.__delete_events:
                 for db_event_name in events_in_db:
                     if not db_event_name in self.type_to_name.values():
-                        self._madconnector.delete_event(db_event_name)
+                        self._scannerconnector.delete_event(db_event_name)
 
         except Exception as e:
             log.error("Error while checking Spawn Events.")
@@ -519,10 +540,12 @@ class EventManager():
             log.exception("Exception info:")
 
     def connect(self):
-        self._madconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, reload_port_list = self.__cfg_mad_reload_ports, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
+        if self.__cfg_scanner == "rdm":
+            self._scannerconnector = RdmConnector(self.__cfg_rdm_api_url, self.__cfg_rdm_api_user, self.__cfg_rdm_api_password, self.__cfg_rdm_assignment_group, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
+        else:
+            self._scannerconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, reload_port_list = self.__cfg_mad_reload_ports, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
         if(self.__tg_info_enable):
             self._api = SimpleTelegramApi(self.__token)
-        #@todo: discord 
 
         # load events initally and update scanner event DB entries
         self._get_events()
