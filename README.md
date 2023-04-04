@@ -8,7 +8,7 @@ This script is a standalone and improved version of the fork [mp-eventwatcher fo
 - MAD: Provide eventdata for scanner plugin pages to visualize current event data of eventmanager
 - RDM support: Delete quests and start re-quest assignment group by RDM API interface
 
-## Recommendation MAD walker configuration to perform quest rescan
+## MAD: recommended walker configuration to perform quest rescan
 To perform an automatic quest rescan after quest deletion, you have to setup your MAD walker in a special way. Example walker setting:
 
 | Area         | Area mode | Walker mode | Setting    |
@@ -16,9 +16,10 @@ To perform an automatic quest rescan after quest deletion, you have to setup you
 | quest_all    | pokestops | coords      | 1:00-6:00  |
 | quest_rescan | pokestops | coords      | 6:00-18:00 |
 | pokemon      | mon_mitm  | period      | 1:10-1:00  |
+
 *quest_rescan: area especially for quest rescan with limited devices/area*
 
-## Example instance setting for RDM to perform quest rescan with smaller area
+## RDM: example instance setting to perform quest rescan with smaller area
 To perform an automatic quest rescan after quest deletion, you have to setup a Assignment Group in RDM, which include at least one Auto-Quest assignment. This Assigment can include a Auto-Quest instance with smaller area then regular Auto-Quest instance and also limited number of devices to not impact mon scans in parallel (in the following example called 'quest_rescan'). So you can do a much faster rescan for priorities areas in parallel to regular mon scanning. Example configuration:
 
 **Instance:**
@@ -26,6 +27,7 @@ To perform an automatic quest rescan after quest deletion, you have to setup a A
 | ------------ | ---------- |
 | quest_all    | Auto-Quest |
 | quest_rescan | Auto-Quest |
+
 *quest_rescan: area especially for quest rescan with limited devices/area*
 
 **Auto-Assignments:**
