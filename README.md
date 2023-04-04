@@ -1,29 +1,51 @@
 # Description
 This script is a standalone and improved version of the fork [mp-eventwatcher fork](https://github.com/hamster007Github/mp-eventwatcher). All of them are based on [mp-eventwatcher](https://github.com/ccev/mp-eventwatcher).
 ## Features
-- Automaticlly add/modify events in scanner DB (MAD) for spawnpoint changing events
-- Delete quests in scanner DB (MAD) and perform "apply settings" (MAD) on start/end of quest changing events
-- Delete pokémon in scanner DB (MAD) on start/end of pokemon changing events
-- Telegram/Discord notification for quest reset
-- Provide eventdata for scanner plugin pages to visualize current event data of eventmanager
+- MAD: Automaticlly add/modify events in scanner DB (MAD) for spawnpoint changing events
+- MAD: Delete quests in scanner DB (MAD) and perform "apply settings" (MAD) on start/end of quest changing events
+- MAD: Delete pokémon in scanner DB (MAD) on start/end of pokemon changing events
+- MAD/RDM: Telegram/Discord notification for quest reset
+- MAD: Provide eventdata for scanner plugin pages to visualize current event data of eventmanager
+- RDM support: Delete quests and start re-quest assignment group by RDM API interface
 
-## Recommendation MAD walker configuration to perform quest rescan
+## MAD: recommended walker configuration to perform quest rescan
 To perform an automatic quest rescan after quest deletion, you have to setup your MAD walker in a special way. Example walker setting:
 
-| Area          | Area mode | Walker mode | Setting    |
-| ------------- | --------- | ----------- | ---------- |
-| quest_all     | pokestops | coords      | 1:00-6:00  |
-| quest_rescan<sup>1</sup> | pokestops | coords      | 6:00-18:00 |
-| pokemon       | mon_mitm  | period      | 1:10-1:00  |
+| Area         | Area mode | Walker mode | Setting    |
+| ------------ | --------- | ----------- | ---------- |
+| quest_all    | pokestops | coords      | 1:00-6:00  |
+| quest_rescan | pokestops | coords      | 6:00-18:00 |
+| pokemon      | mon_mitm  | period      | 1:10-1:00  |
 
-<sup>1</sup>Area especially for quest rescan with limited devices/pokestops -> MAD will use this Area to rescan with e.g. smaller geofence or limited devices)
+*quest_rescan: area especially for quest rescan with limited devices/area*
+
+## RDM: example instance setting to perform quest rescan with smaller area
+To perform an automatic quest rescan after quest deletion, you have to setup a Assignment Group in RDM, which include at least one Auto-Quest assignment. This Assigment can include a Auto-Quest instance with smaller area then regular Auto-Quest instance and also limited number of devices to not impact mon scans in parallel (in the following example called 'quest_rescan'). So you can do a much faster rescan for priorities areas in parallel to regular mon scanning. Example configuration:
+
+**Instance:**
+| Name         | Type       |
+| ------------ | ---------- |
+| quest_all    | Auto-Quest |
+| quest_rescan | Auto-Quest |
+
+*quest_rescan: area especially for quest rescan with limited devices/area*
+
+**Auto-Assignments:**
+| Source       |  Target      | Device UUID / Group | Time        |
+| ------------ | ------------ | ------------------- | ----------- |
+|              | quest_all    | AllDevices          | 01:00:00    |
+| quest_all    | pokemon      | AllDevices          | On Complete |
+| quest_all    | quest_rescan | Device1             | 05:00:00    |
+| quest_rescan | pokemon      | Device1             | On Complete |
+
+**Assignment Groups:**
+| Name   | Assignments             |
+| ------ | ----------------------- |
+| Rescan | Device1 -> quest_rescan |
 
 ## Limitations
-### No lure duration changes for events without spanwnpoint changes
+### MAD: No lure duration changes for events without spanwnpoint changes
 MAD ignores lure_duration setting for event 'DEFAULT' (see function _extract_args_single_stop() in [DbPogoProtoSubmit.py](https://github.com/Map-A-Droid/MAD/blob/master/mapadroid/db/DbPogoProtoSubmit.py))
-
-### Only support for MAD
-Only MAD interface available, yet. But with this standalone script, it should be easy to include additional scanner systems (PRs welcome)
 
 ## Source of event data
 The [pogoinfo](https://github.com/ccev/pogoinfo) from project from [ccev](https://github.com/ccev) provides regular updated JSON files with pogo data like event and raid information. For event data see: [event.json](https://github.com/ccev/pogoinfo/blob/v2/active/events.json).
@@ -84,14 +106,22 @@ Based on the examples in [Installation](#Installation) you can use following eco
 - `reset_quests_exclude_events` define event name text phrases, which shall be excluded for quest reset. Eventmanager checks, if an event name contain matching text. Can be used to ignore Go battle day, which only has special research and no changing pokestop quests. Separate multiple event name text phrases with comma.
 
 ## scanner section
+- `scanner` General: set your scanner system ['rdm' or 'mad' (default)]
+- `rescan_trigger_cmd` General: (optional) user OS shell command, which should be executed on quest reset. Can also be a shellscript with custom restart MAD. Possible examples:
+  - MAD 'apply settings' on different server to restart worker: reset_trigger_cmd = sh userscripts/mad_custom_apply_settings.sh
+  - MAD restart: you need your own script, which matching your setup (depends on how you start MAD (pm2, systemd, ...)
+### MAD specific options
 - `db_host` (optional) scanner database host adress (default: localhost)
 - `db_port` (optional) scanner database port (default: 3306)
-- `db_name` scanner database name
-- `db_user` database username (need select and delete access rights for `db_name`)
+- `db_name` MAD database name
+- `db_user` MAD database username (need select and delete access rights for `db_name`)
 - `db_password` password of `db_user`
-- `rescan_trigger_cmd` (optional) OS shell command, which should be executed on quest reset. examples:
-  - MAD 'apply settings' to restart worker: reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
-  - MAD restart: you need your own script, which matching your setup (depends on how you start MAD (pm2, systemd, ...)
+- `rescan_trigger_madmin_ports` MAD madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma. e.g. rescan_trigger_madmin_ports = 5000, 5001. If you don't want to use reload ('apply settings') -> comment it out.
+### RDM specific options
+- `rdm_api_url` RDM API url (webfrontend url incl. port). If you use RDM default, set this to http://127.0.0.1:9001
+- `rdm_api_user` RDM API admin username
+- `rdm_api_password` RDM API admin password
+- `rdm_assignment_group` RDM assignment group name, which contain your auto-quest instances for re-quest
 
 ## telegram section
 This feature informs a user, group or channel about quest resets.
@@ -116,9 +146,8 @@ You can provide your own local_custom.json with locals. You can also include new
   - `${event_trigger}` will be replaced by "start" or "end"
   - `${event_name}` will be replaced by english event name
   - `${rescan_str}` will be replaced by `tg_questrescan_before`, `tg_questrescan_during` or `tg_questrescan_after`, depending on actual time and `quest_rescan_timewindow`
-- `tg_questrescan_before` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens before `quest_rescan_timewindow`. Will result in regular quest scan later.
-- `tg_questrescan_during` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens during `quest_rescan_timewindow`. Will result in quest rescan.
-- `tg_questrescan_after` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens after `quest_rescan_timewindow`. Will result in no quest rescan.
+- `tg_questrescan_outside` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens outside `quest_rescan_timewindow`. Will result in no additional rescan.
+- `tg_questrescan_inside` string which is posted additionally in configurated `tg_chat_id`, if quest reset happens inside `quest_rescan_timewindow`. Will result in quest rescan.
 
 **Discord**
 
@@ -138,6 +167,5 @@ Remark: activate test cases from `TestEventManagerWithTestenvironment` only, if 
 You can have same event list as the eventwatcher plugin with this the [EventManagerViewerPlugin](https://github.com/hamster007Github/EventManagerViewerPlugin). Check repo for more information
 
 # Todos
-* [ ] remove dependencies to testenvironment for standard unit tests
 * [ ] Telegram/Discord notification for pokémon reset
-* [ ] check abstract class with different number arguments for function implementation
+* [ ] RDM: pokemon reset feature on event start/end

@@ -22,9 +22,9 @@ reset_pokemon_strategy = filtered
 ; option to automatically delete quests from MAD database on start and/or end of quest changing event to enable MAD to rescan quests. ['true' or 'false' (default)]
 reset_quests_enable = false
 ; define event types and if you want quests to reset for their start, end or both. [Available event types are 'event', 'community-day', 'spotlight-hour' and 'raid-hour']
-reset_quests_event_type = 
+reset_quests_event_type =
 ; time window, in which quests would be scanned (regular and rescan). Used for inform users about possible rescan (24h, only full hours are supported). e.g. quest_rescan_timewindow = 02-18
-quest_rescan_timewindow = 
+quest_rescan_timewindow =
 ; define event name text phrases, which shall be excluded for quest reset. Separate multiple event name text phrases with comma. Uncomment (remove #) to use.
 #reset_quests_exclude_events = go battle day
 
@@ -32,18 +32,30 @@ quest_rescan_timewindow =
 ; * scanner configuration *
 ; **********************************
 [scanner]
-; (optional) host adress. use localhost, if DB is executed on same server
+; General: scanner system [mad or rdm]
+scanner = mad
+; General: (optional) user OS shell command, which should be executed on quest reset. Can also be a shellscript with custom restart MAD.
+#rescan_trigger_cmd = sh userscripts/mad_custom_apply_settings.sh
+; MAD: (optional) host adress. use localhost, if DB is executed on same server
 #db_host = 
-; (optional) port of database. Set, if you use a non-default port. default: 3306
+; MAD: (optional) port of database. Set, if you use a non-default port. default: 3306
 #db_port = 
-; scanner database name
-db_name = 
-; database user (need select and delete access rights)
-db_user = 
-; database user passwort
-db_password = 
-; (optional) OS shell command, which should be executed on quest reset. e.g. reset_trigger_cmd = sh userscripts/mad_apply_settings.sh
-#rescan_trigger_cmd = 
+; MAD: scanner database name
+db_name =
+; MAD: database user (need select and delete access rights)
+db_user =
+; MAD: database user passwort
+db_password =
+; MAD: madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma.
+rescan_trigger_madmin_ports = 5000
+; RDM: API url (webfrontend url incl. port)
+rdm_api_url = http://127.0.0.1:9001
+; RDM: API admin username
+rdm_api_user =
+; RDM: API admin password
+rdm_api_password =
+; RDM: name of quest rescan assignment group
+rdm_assignment_group =
 
 ; *******************************
 ; * Telegram info configuration *
@@ -52,9 +64,9 @@ db_password =
 ; Enable or disable Telegram notification feature. ['true' or 'false' (default)]
 tg_info_enable = false
 ; Telegram bot API token from @godfather. e.g. 12345678:abcdefghijklmnopqrstuvwxyz
-tg_bot_token = 
+tg_bot_token =
 ; @username or id. Example: tg_chat_id = -12345678 -> @bruellhamster
-tg_chat_id = 
+tg_chat_id =
 
 ; *******************************
 ; * Discord info configuration *

@@ -11,18 +11,14 @@
         "de": "Info: Pokestop-Quests gelöscht aufgrund ${event_trigger} von Event ${event_name}. ${rescan_str}.",
         "en": "Info: Quests deleted caused by ${event_trigger} of event ${event_name}. ${rescan_str}."
     },
-    "tg_questrescan_before":{
-        "de": "Voller Questscan erfolgt zur regulären Zeit",
-        "en": "Scanning for new quests postponed until regual quest scan"
-    },
-    "tg_questrescan_during":{
-        "de": "Neuer Questscan gestartet",
-        "en": "Starting scanning for new quests"
-    },
-    "tg_questrescan_after":{
+    "tg_questrescan_outside":{
         "de": "Kein neuer Questscan gestartet",
-        "en": "No scanning for new quests"
-    },    
+        "en": "No rescanning for new quests"
+    },
+    "tg_questrescan_inside":{
+        "de": "Neuer Questscan gestartet",
+        "en": "Starting rescanning for new quests"
+    },
     "dc_questreset_tmpl":{
         "de": "Pokestop-Quests gelöscht aufgrund ${event_trigger} von Event ${event_name}.",
         "en": "Quests deleted caused by ${event_trigger} of event ${event_name}."

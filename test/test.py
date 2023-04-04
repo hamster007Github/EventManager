@@ -326,7 +326,7 @@ class TestEventManager(unittest.TestCase):
         self.mock_mad_reset_all_pokemon.assert_not_called()
 
 
-@unittest.skip("Remove this line for real testenvironment testing")
+#@unittest.skip("Remove this line for real testenvironment testing")
 class TestEventManagerWithTestenvironment(unittest.TestCase):
     @patch('eventmanager.PogoInfoEventList.get_json')
     def test_event_start_full(self, mock_get_json):
@@ -341,7 +341,7 @@ class TestEventManagerWithTestenvironment(unittest.TestCase):
         
         self.assertTrue(helper_eventmanager_create_and_check(self, config_file_name = "/test/config_realtest.ini"))
         self._event_manager._EventManager__reset_pokemon_enable = True
-        self._event_manager._EventManager__reset_pokemon_strategy = "all"
+        self._event_manager._EventManager__reset_pokemon_strategy = "filtered"
         
         test_step = log_teststep(test_step, f"event_manager.connect() t={datetime.now()}")
         self.assertTrue(helper_eventmanager_connect(self))
