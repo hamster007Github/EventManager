@@ -201,6 +201,14 @@ class EventManager():
             else:
                 times = ["start", "end"]
             self.__quests_reset_types[etype] = times
+        quest_timewindow_str = self._config.get("general", "quest_rescan_timewindow", fallback="0-23")
+        status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
+        if status is False:
+            error_str = f"EventManager: Error while read parameter 'quest_rescan_timewindow' from config.ini. Please check value and pattern: quest_rescan_timewindow = ##-##"
+            log.error(error_str)
+            raise ValueError(error_str)
+        self.__quest_timewindow_start_h = timewindow_list[0]
+        self.__quest_timewindow_end_h = timewindow_list[1]
         quests_reset_excludes_str = self._config.get("general", "reset_quests_exclude_events", fallback=None)
         if quests_reset_excludes_str is None:
             self.__quests_reset_excludes_list = None
@@ -243,14 +251,6 @@ class EventManager():
                 raise ValueError(error_str)
             # split comma seperated chat id list and create python list
             self.__tg_chat_id_list = [chat_id.strip() for chat_id in tg_chat_id_str.split(',')]
-            quest_timewindow_str = self._config.get("general", "quest_rescan_timewindow")
-            status, timewindow_list = self._get_timewindow_from_string(quest_timewindow_str)
-            if status is False:
-                error_str = f"EventManager: Error while read parameter 'quest_rescan_timewindow' from config.ini. Please check value and pattern: quest_rescan_timewindow = ##-##"
-                log.error(error_str)
-                raise ValueError(error_str)
-            self.__quest_timewindow_start_h = timewindow_list[0]
-            self.__quest_timewindow_end_h = timewindow_list[1]
 
         # section [discord]: 
         self.__dc_info_enable = self._config.getboolean("discord", "dc_info_enable", fallback=False)
@@ -261,7 +261,6 @@ class EventManager():
                 error_str = f"EventManager: 'dc_webhook_url' not set in config.ini"
                 log.error(error_str)
                 raise ValueError(error_str)
-
             #convert parameter into list and remove whitespaces
             self.__dc_webhook_url_list = [webhook_url.strip() for webhook_url in dc_webhook_url_str.split(',')]
             self.__dc_webook_username = self._config.get("discord", "dc_webhook_username", fallback="PoGo Event Bot")
