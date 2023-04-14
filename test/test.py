@@ -326,7 +326,7 @@ class TestEventManager(unittest.TestCase):
         self.mock_mad_reset_all_pokemon.assert_not_called()
 
 
-#@unittest.skip("Remove this line for real testenvironment testing")
+@unittest.skip("Remove this line for real testenvironment testing")
 class TestEventManagerWithTestenvironment(unittest.TestCase):
     @patch('eventmanager.PogoInfoEventList.get_json')
     def test_event_start_full(self, mock_get_json):
