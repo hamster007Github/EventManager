@@ -28,6 +28,7 @@ from string import Template
 from simpletelegramapi import SimpleTelegramApi
 from scannerconnector import MadConnector
 from scannerconnector import RdmConnector
+from scannerconnector import GolbathybridConnector
 
 '''
 ****************************************
@@ -222,6 +223,14 @@ class EventManager():
             self.__cfg_rdm_api_user = self._config.get("scanner", "rdm_api_user", fallback=None)
             self.__cfg_rdm_api_password = self._config.get("scanner", "rdm_api_password", fallback=None)
             self.__cfg_rdm_assignment_group = self._config.get("scanner", "rdm_assignment_group", fallback=None)
+            #@TODO check parameters for None and raise exception
+        elif self.__cfg_scanner == "golbathybrid":
+            self.__cfg_rdm_api_url = self._config.get("scanner", "rdm_api_url", fallback=None)
+            self.__cfg_rdm_api_user = self._config.get("scanner", "rdm_api_user", fallback=None)
+            self.__cfg_rdm_api_password = self._config.get("scanner", "rdm_api_password", fallback=None)
+            self.__cfg_rdm_assignment_group = self._config.get("scanner", "rdm_assignment_group", fallback=None)
+            self.__cfg_golbat_api_url = self._config.get("scanner", "golbat_api_url", fallback=None)
+            self.__cfg_golbat_api_secret = self._config.get("scanner", "golbat_api_secret", fallback="")
             #@TODO check parameters for None and raise exception
         else:
             self.__cfg_db_host = self._config.get("scanner", "db_host", fallback="localhost")
@@ -541,6 +550,8 @@ class EventManager():
     def connect(self):
         if self.__cfg_scanner == "rdm":
             self._scannerconnector = RdmConnector(self.__cfg_rdm_api_url, self.__cfg_rdm_api_user, self.__cfg_rdm_api_password, self.__cfg_rdm_assignment_group, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
+        elif self.__cfg_scanner == "golbathybrid":
+            self._scannerconnector = GolbathybridConnector(self.__cfg_rdm_api_url, self.__cfg_rdm_api_user, self.__cfg_rdm_api_password, self.__cfg_rdm_assignment_group, self.__cfg_golbat_api_url, self.__cfg_golbat_api_secret, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
         else:
             self._scannerconnector = MadConnector(self.__cfg_db_host, self.__cfg_db_port, self.__cfg_db_name, self.__cfg_db_user, self.__cfg_db_password, reload_port_list = self.__cfg_mad_reload_ports, rescan_trigger_command = self.__cfg_scanner_rescan_trigger_cmd)
         if(self.__tg_info_enable):
