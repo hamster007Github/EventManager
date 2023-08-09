@@ -286,7 +286,7 @@ class GolbathybridConnector(ScannerConnector):
         return result
 
     def reset_all_quests(self):
-        world_geofence = {"fence":[{"lat": 0.0,"lon": 0.0},{"lat": 99.0,"lon": 0.0},{"lat": 99.0,"lon": 99.0},{"lat": 0.0,"lon": 99.0},{"lat": 0.0,"lon": 0.0}]}
+        world_geofence = {"fence":[{"lat": -90.0,"lon": -180.0},{"lat": 90.0,"lon": -180.0},{"lat": 90.0,"lon": 180.0},{"lat": -90.0,"lon": 180.0},{"lat": -90.0,"lon": -180.0}]}
         result = self._api_post("/api/clear-quests", world_geofence)
         log.info(f'GolbathybridConnector: quests deleted by Golbat API: {result}')
         self._rdmConnector.reset_all_quests()
