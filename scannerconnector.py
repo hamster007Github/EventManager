@@ -264,7 +264,7 @@ class RdmConnector(ScannerConnector):
 class GolbathybridConnector(ScannerConnector):
     def __init__(self, rdm_api_url, rdm_api_username, rdm_api_password, rdm_assignment_group, golbat_api_url, golbat_api_secret, rescan_trigger_command = None):
         self._golbat_api_url = golbat_api_url
-        self._golbat_api_secret_ = golbat_api_secret
+        self._golbat_api_secret = golbat_api_secret
         self._rdmConnector = RdmConnector(rdm_api_url, rdm_api_username, rdm_api_password, rdm_assignment_group, rescan_trigger_command)
 
     def _api_post(self, api_url_substring, json_data):
