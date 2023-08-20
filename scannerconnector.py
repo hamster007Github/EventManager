@@ -271,9 +271,9 @@ class GolbathybridConnector(ScannerConnector):
         result = False
         try:
             url = self._golbat_api_url + api_url_substring
-            html_secret_header = f"X-Golbat-Secret: {self._golbat_api_secret}"
+            html_secret_header = {"X-Golbat-Secret": f"{self._golbat_api_secret}"}
             result = requests.post(url, headers=html_secret_header, json=json_data)
-            if (result.status_code != 200):
+            if (result.status_code != 200 and result.status_code != 202):
                 log.error(f"GolbathybridConnector: _api_post '{url}' failed with status-code {result.status_code}")
             else:
                 log.debug(f"GolbathybridConnector: _api_post '{url}' successful. Result:{result}")
