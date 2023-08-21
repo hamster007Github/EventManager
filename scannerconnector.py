@@ -224,11 +224,9 @@ class RdmConnector(ScannerConnector):
             log.error(f'RdmConnector: quests deleted by API failed')
 
     def reset_all_pokemon(self):
-        #@TODO RDM
         log.info(f"RdmConnector: reset_all_pokemon not supported yet -> skip")
 
     def reset_filtered_pokemon(self, eventchange_datetime_UTC):
-        #@TODO RDM
         log.info(f"RdmConnector: reset_filtered_pokemon not supported yet -> skip")
 
     def get_events(self):
@@ -262,3 +260,56 @@ class RdmConnector(ScannerConnector):
             except Exception:
                 log.error(f"RdmConnector: exception while running rescan trigger command '{self._rescan_trigger_command}'")
                 log.exception("Exception info:")
+
+class GolbathybridConnector(ScannerConnector):
+    def __init__(self, rdm_api_url, rdm_api_username, rdm_api_password, rdm_assignment_group, golbat_api_url, golbat_api_secret, rescan_trigger_command = None):
+        self._golbat_api_url = golbat_api_url
+        self._golbat_api_secret = golbat_api_secret
+        self._rdmConnector = RdmConnector(rdm_api_url, rdm_api_username, rdm_api_password, rdm_assignment_group, rescan_trigger_command)
+
+    def _api_post(self, api_url_substring, json_data):
+        result = False
+        try:
+            url = self._golbat_api_url + api_url_substring
+            html_secret_header = {"X-Golbat-Secret": f"{self._golbat_api_secret}"}
+            result = requests.post(url, headers=html_secret_header, json=json_data)
+            if (result.status_code != 200 and result.status_code != 202):
+                log.error(f"GolbathybridConnector: _api_post '{url}' failed with status-code {result.status_code}")
+            else:
+                log.debug(f"GolbathybridConnector: _api_post '{url}' successful. Result:{result}")
+                result = True;
+        except requests.ConnectionError:
+            log.error(f"GolbathybridConnector: connection error for _api_post '{url}'. Please check your 'golbat_api_url' and 'golbat_api_secret' settings or availability of Golbat.")
+        except Exception:
+            log.error(f"GolbathybridConnector: exception while _api_post '{url}'")
+            log.exception("Exception info:")
+        return result
+
+    def reset_all_quests(self):
+        world_geofence = {"fence":[{"lat": -90.0,"lon": -180.0},{"lat": 90.0,"lon": -180.0},{"lat": 90.0,"lon": 180.0},{"lat": -90.0,"lon": 180.0},{"lat": -90.0,"lon": -180.0}]}
+        result = self._api_post("/api/clear-quests", world_geofence)
+        log.info(f'GolbathybridConnector: quests deleted by Golbat API: {result}')
+        self._rdmConnector.reset_all_quests()
+
+    def reset_all_pokemon(self):
+        log.info(f"GolbathybridConnector: reset_all_pokemon not supported yet -> skip")
+        self._rdmConnector.reset_all_pokemon()
+
+    def reset_filtered_pokemon(self, eventchange_datetime_UTC):
+        log.info(f"GolbathybridConnector: reset_filtered_pokemon not supported yet -> skip")
+
+    def get_events(self):
+        log.debug(f"GolbathybridConnector: get_events not supported -> skip")
+        return {}
+
+    def insert_event(self, event_type_name, event_start, event_end, event_lure_duration):
+        log.debug(f"GolbathybridConnector: insert_event not supported -> skip")
+
+    def update_event(self, event_type_name, event_start, event_end, event_lure_duration):
+        log.debug(f"GolbathybridConnector: update_event not supported -> skip")
+
+    def delete_event(self, event_type_name):
+        log.debug(f"GolbathybridConnector: delete_event not supported -> skip")
+
+    def trigger_rescan(self):
+        self._rdmConnector.trigger_rescan()

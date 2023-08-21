@@ -7,6 +7,7 @@ This script is a standalone and improved version of the fork [mp-eventwatcher fo
 - MAD/RDM: Telegram/Discord notification for quest reset
 - MAD: Provide eventdata for scanner plugin pages to visualize current event data of eventmanager
 - RDM support: Delete quests and start re-quest assignment group by RDM API interface
+- Golbat-hybrid (RDM+Golbat) support: Delete quests and start re-quest assignment group by RDM and Golbat API interface
 
 ## MAD: recommended walker configuration to perform quest rescan
 To perform an automatic quest rescan after quest deletion, you have to setup your MAD walker in a special way. Example walker setting:
@@ -106,7 +107,7 @@ Based on the examples in [Installation](#Installation) you can use following eco
 - `reset_quests_exclude_events` define event name text phrases, which shall be excluded for quest reset. Eventmanager checks, if an event name contain matching text. Can be used to ignore Go battle day, which only has special research and no changing pokestop quests. Separate multiple event name text phrases with comma.
 
 ## scanner section
-- `scanner` General: set your scanner system ['rdm' or 'mad' (default)]
+- `scanner` General: set your scanner system ['rdm', "golbathybrid' or 'mad' (default)]
 - `rescan_trigger_cmd` General: (optional) user OS shell command, which should be executed on quest reset. Can also be a shellscript with custom restart MAD. Possible examples:
   - MAD 'apply settings' on different server to restart worker: reset_trigger_cmd = sh userscripts/mad_custom_apply_settings.sh
   - MAD restart: you need your own script, which matching your setup (depends on how you start MAD (pm2, systemd, ...)
@@ -117,11 +118,14 @@ Based on the examples in [Installation](#Installation) you can use following eco
 - `db_user` MAD database username (need select and delete access rights for `db_name`)
 - `db_password` password of `db_user`
 - `rescan_trigger_madmin_ports` MAD madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma. e.g. rescan_trigger_madmin_ports = 5000, 5001. If you don't want to use reload ('apply settings') -> comment it out.
-### RDM specific options
+### RDM / Golbat-hybrid specific options
 - `rdm_api_url` RDM API url (webfrontend url incl. port). If you use RDM default, set this to http://127.0.0.1:9001
 - `rdm_api_user` RDM API admin username
 - `rdm_api_password` RDM API admin password
 - `rdm_assignment_group` RDM assignment group name, which contain your auto-quest instances for re-quest
+### Golbat-hybrid specific options
+- `golbat_api_url` Golbat API url (incl. port). Must differ from `rdm_api_url` (RDM and Golbat have same default API port 9001!) e.g. http://127.0.0.1:9099
+- `golbat_api_secret` Golbat API secret string
 
 ## telegram section
 This feature informs a user, group or channel about quest resets.

@@ -32,30 +32,34 @@ quest_rescan_timewindow =
 ; * scanner configuration *
 ; **********************************
 [scanner]
-; General: scanner system [mad or rdm]
+; General: scanner system [mad, rdm or golbathybrid]
 scanner = mad
 ; General: (optional) user OS shell command, which should be executed on quest reset. Can also be a shellscript with custom restart MAD.
 #rescan_trigger_cmd = sh userscripts/mad_custom_apply_settings.sh
-; MAD: (optional) host adress. use localhost, if DB is executed on same server
+; mad: (optional) host adress. use localhost, if DB running local on same server
 #db_host = 
-; MAD: (optional) port of database. Set, if you use a non-default port. default: 3306
+; mad: (optional) port of database. Set, if you use a non-default port. default: 3306
 #db_port = 
-; MAD: scanner database name
+; mad: scanner database name
 db_name =
-; MAD: database user (need select and delete access rights)
+; mad: database user (need select and delete access rights)
 db_user =
-; MAD: database user passwort
+; mad: database user passwort
 db_password =
-; MAD: madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma.
+; mad: madmin port to call reload ('apply settings') on quest reset to reset worker. For multiple MAD instances list instance ports with comma.
 rescan_trigger_madmin_ports = 5000
-; RDM: API url (webfrontend url incl. port)
+; rdm or golbathybrid: RDM API url (webfrontend url incl. port)
 rdm_api_url = http://127.0.0.1:9001
-; RDM: API admin username
+; rdm or golbathybrid: RDM API admin username
 rdm_api_user =
-; RDM: API admin password
+; rdm or golbathybrid: RDM API admin password
 rdm_api_password =
-; RDM: name of quest rescan assignment group
+; rdm or golbathybrid: name of RDM quest rescan assignment group
 rdm_assignment_group =
+; golbathybrid: Golbat API url of golbat (incl. port)
+golbat_api_url = http://127.0.0.1:9010
+; golbathybrid: Golbat API secret
+golbat_api_secret =
 
 ; *******************************
 ; * Telegram info configuration *
