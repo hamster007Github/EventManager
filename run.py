@@ -66,12 +66,7 @@ def config_logging(logger, console_loglevel = logging.INFO, file_loglevel = None
 def is_valid_loglevel(loglevel):
     return any(loglevel in sub for sub in VALID_LOGLEVEL)
 
-'''
-****************************************
-* main functions
-****************************************
-'''
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-lc', '--log-level-console', default='INFO', choices=VALID_LOGLEVEL, required=False, help='set log level for console. Default:INFO')
     parser.add_argument('-lf', '--log-level-file', default='NONE', choices=VALID_LOGLEVEL_FILE, required=False, help='set log level for logfile. Default:NONE')
@@ -85,12 +80,28 @@ if __name__ == "__main__":
     config_logging(log, console_loglevel = console_loglevel, file_loglevel = file_loglevel)
     
     try:
+        # startup and init
         log.info(f"Start EventManager...")
         event_manager = eventmanager.EventManager()
         event_manager.connect()
-    except Exception as e:
-        log.error(f"Error in startup of EventManager (__init__ or connect()). Check configuration.")
-        log.exception("Exception info:")
+    except Exception:
+        log.exception(f"Error in startup of EventManager (__init__ or connect()). Check configuration.")
     else:
+        # cyclic runable
         while(True):
             event_manager.run()
+
+'''
+****************************************
+* main functions
+****************************************
+'''
+if __name__ == "__main__":
+    try:
+        main()
+    except (KeyboardInterrupt, SystemExit):
+        log.warning(f"Script stopped by exit request (e.g. CTRL+c)")
+        sys.exit(1)
+    except Exception as e:
+        log.exception(f"unexpected exception in main()")
+        sys.exit(2)

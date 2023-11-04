@@ -133,13 +133,14 @@ class PogoInfoEventList():
     def __init__(self, source_url = "https://raw.githubusercontent.com/ccev/pogoinfo/v2/active/events.json"):
         self._source_url = source_url
     def get_json(self):
+        json_list = {}
         try:
             result = requests.get(self._source_url)
             json_list = result.json()
-        except Exception as e:
-            log.error(f"Exception in getting event list from '{self._source_url}'")
-            log.exception("Exception info:")
-            json_list = {}
+        except requests.exceptions.RequestException:
+            log.warning("Connection issues during get PogoInfoEventList(). Github down?")
+        except Exception:
+            log.exception("Unknown exception in PogoInfoEventList()")
         return json_list
 
 class EventManager():
@@ -579,7 +580,7 @@ class EventManager():
             self._last_event_update = helper_time_now()
 
         # wait mainloop time
-        log.info(f"sleep {self.__sleep_mainloop_in_s} seconds...")
+        log.debug(f"sleep {self.__sleep_mainloop_in_s} seconds...")
         time.sleep(self.__sleep_mainloop_in_s)
 
 '''
